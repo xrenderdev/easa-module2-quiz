@@ -27,17 +27,24 @@ function makeOptions(correct, distractors, seed) {
   return seededShuffle(clean, seed);
 }
 
+
+function cleanClue(text) {
+  if (!text) return "";
+  const trimmed = String(text).trim();
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
 function buildQuestions() {
   const questions = [];
   CONCEPTS.forEach((c, i) => {
     const termOptions1 = makeOptions(c.term, pickDistractors(c, "term", i), i + 10);
-    questions.push({ id:`q${i}a`, chapter:c.chapter, concept:c.term, difficulty:"Normal", q:`Which keyword means: ${c.definition}?`, options:termOptions1, answer:termOptions1.indexOf(c.term), hint:c.definition, formula:c.formula });
+    questions.push({ id:`q${i}a`, chapter:c.chapter, concept:c.term, difficulty:"Normal", q:cleanClue(c.definition), options:termOptions1, answer:termOptions1.indexOf(c.term), hint:c.definition, formula:c.formula });
     const defOptions = makeOptions(c.definition, pickDistractors(c, "definition", i + 20), i + 20);
     questions.push({ id:`q${i}b`, chapter:c.chapter, concept:c.term, difficulty:"Tricky", q:`${c.term} is best described as _____.`, options:defOptions, answer:defOptions.indexOf(c.definition), hint:c.definition, formula:c.formula });
     const termOptions2 = makeOptions(c.term, pickDistractors(c, "term", i + 30), i + 30);
-    questions.push({ id:`q${i}c`, chapter:c.chapter, concept:c.term, difficulty:"Normal", q:`In ${c.chapter}, choose the correct keyword for this clue: ${c.definition}.`, options:termOptions2, answer:termOptions2.indexOf(c.term), hint:c.definition, formula:c.formula });
+    questions.push({ id:`q${i}c`, chapter:c.chapter, concept:c.term, difficulty:"Normal", q:cleanClue(c.definition), options:termOptions2, answer:termOptions2.indexOf(c.term), hint:c.definition, formula:c.formula });
     const termOptions3 = makeOptions(c.term, pickDistractors(c, "term", i + 40), i + 40);
-    questions.push({ id:`q${i}d`, chapter:c.chapter, concept:c.term, difficulty:"Hard", q:`Formula or memory clue: ${c.formula || c.definition}. Which keyword matches?`, options:termOptions3, answer:termOptions3.indexOf(c.term), hint:c.definition, formula:c.formula });
+    questions.push({ id:`q${i}d`, chapter:c.chapter, concept:c.term, difficulty:"Hard", q:cleanClue(c.formula || c.definition), options:termOptions3, answer:termOptions3.indexOf(c.term), hint:c.definition, formula:c.formula });
   });
   RELATIONSHIPS.forEach((r, i) => {
     const [chapter, concept, q, answer, formula] = r;

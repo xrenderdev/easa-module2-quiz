@@ -34,107 +34,6 @@ function cleanClue(text) {
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 }
 
-
-function asSentence(text) {
-  if (!text) return "";
-  const trimmed = String(text).trim();
-  if (!trimmed) return "";
-  const capitalised = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-  return /[.!?]$/.test(capitalised) ? capitalised : `${capitalised}.`;
-}
-
-function findConceptForOption(option) {
-  if (!option) return null;
-  const clean = String(option).toLowerCase().trim();
-  return CONCEPTS.find((c) =>
-    String(c.term).toLowerCase() === clean ||
-    String(c.definition).toLowerCase() === clean ||
-    String(c.formula || "").toLowerCase() === clean
-  );
-}
-
-const CHAPTER_TRAPS = {
-  "Matter": "Do not mix up atom, molecule, compound and mixture. A compound has different elements chemically bonded; a mixture is not chemically bonded.",
-  "Statics": "Check whether the question asks for straight-line force, turning effect, balance, stress, or deformation.",
-  "Mechanics of Matter": "Pressure is force per area; density is mass per volume. These are common EASA traps.",
-  "Kinetics": "Speed has no direction, velocity has direction, and acceleration means velocity is changing.",
-  "Dynamics": "Work, power, energy, momentum and impulse look similar, but their formulas are different.",
-  "Fluid Dynamics": "For Bernoulli and venturi questions, faster flow usually means lower static pressure.",
-  "Thermodynamics": "Latent heat changes state; sensible heat changes temperature. Conduction, convection and radiation are different transfer methods.",
-  "Engine Gas Cycles": "Separate piston engine Otto cycle from gas turbine Brayton cycle.",
-  "Optics": "Reflection means bouncing; refraction means bending; dispersion means colour separation.",
-  "Waves & Sound": "Frequency is cycles per second, wavelength is distance per cycle, and sound needs a medium."
-};
-
-function chapterTrap(chapter) {
-  return CHAPTER_TRAPS[chapter] || "Focus on the keyword and match it to the correct formula or physical effect.";
-}
-
-function makeMemoryHook(term, formula) {
-  if (!term) return "Read the question keyword first, then match it to the physical meaning.";
-  const t = term.toLowerCase();
-  if (t.includes("pressure")) return "Pressure = force spread over area. More force gives more pressure; more area gives less pressure.";
-  if (t.includes("density")) return "Density = how much mass is packed into a volume.";
-  if (t.includes("momentum")) return "Moving mass means momentum.";
-  if (t.includes("power")) return "Power is how fast work is done.";
-  if (t.includes("work")) return "Work needs force and distance in the direction of motion.";
-  if (t.includes("velocity")) return "Velocity is speed with direction.";
-  if (t.includes("acceleration")) return "Acceleration means velocity is changing.";
-  if (t.includes("conduction")) return "Touch = conduction.";
-  if (t.includes("convection")) return "Flow = convection.";
-  if (t.includes("radiation")) return "Rays = radiation.";
-  if (t.includes("refraction")) return "Refraction = light bends when it changes medium.";
-  if (t.includes("reflection")) return "Reflection = light bounces.";
-  if (t.includes("frequency")) return "Frequency = how many cycles each second.";
-  if (t.includes("wavelength")) return "Wavelength = distance from crest to crest.";
-  if (t.includes("amplitude")) return "Amplitude = wave height or strength.";
-  if (t.includes("latent")) return "Latent heat is hidden during state change; temperature stays the same during the change.";
-  if (t.includes("sensible")) return "Sensible heat is felt as temperature change.";
-  if (formula) return `Memory clue: connect ${term} with ${formula}.`;
-  return `Memory clue: ${term} is the keyword to recognise.`;
-}
-
-function optionExplanation(option, current) {
-  const correctText = current.options[current.answer];
-  if (option === correctText) {
-    return `${option} is correct because it matches the clue: ${current.hint || current.concept}.`;
-  }
-
-  const concept = findConceptForOption(option);
-  if (concept) {
-    return `${option} is not the best answer here. It means ${concept.definition}, but this question is testing ${current.concept}.`;
-  }
-
-  const lower = String(option).toLowerCase();
-  if (["increase", "decrease", "stay the same", "become zero", "become negative"].includes(lower)) {
-    return `${option} is wrong for this relationship. Use the formula clue: ${current.formula}.`;
-  }
-
-  return `${option} is not correct because it does not match the keyword or formula clue for ${current.concept}.`;
-}
-
-function buildAIExplanation(current) {
-  const correct = current.options[current.answer];
-  const concept = findConceptForOption(current.concept) || CONCEPTS.find((c) => c.term === current.concept);
-  const definition = concept?.definition || current.hint || current.explanation || "";
-  const formula = current.formula || concept?.formula || "No formula needed; this is a keyword/concept question.";
-  const isDefinitionAnswer = concept && correct === concept.definition;
-
-  return {
-    correct,
-    why: isDefinitionAnswer
-      ? `${current.concept} is best described as: ${definition}.`
-      : `${correct} is the correct keyword because it means ${definition}.`,
-    keyword: `Spot the clue words in the question: "${current.q}". These words point to ${current.concept}.`,
-    formula,
-    memory: makeMemoryHook(current.concept, formula),
-    trap: chapterTrap(current.chapter),
-    wrong: current.options
-      .filter((option) => option !== correct)
-      .map((option) => optionExplanation(option, current))
-  };
-}
-
 function buildQuestions() {
   const questions = [];
   CONCEPTS.forEach((c, i) => {
@@ -271,28 +170,7 @@ export default function App() {
 
           {started && complete && <div className="bg-white/90 backdrop-blur rounded-3xl shadow-xl border border-white/70 p-6 space-y-5"><h2 className="text-3xl font-bold">Session Complete</h2><div className="grid sm:grid-cols-3 gap-3 text-center"><div className="bg-gradient-to-br from-blue-50 to-cyan-100 rounded-2xl p-4"><div className="text-sm text-slate-500">Final Score</div><div className="text-3xl font-bold">{scorePercent}%</div></div><div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl p-4"><div className="text-sm text-slate-500">Correct</div><div className="text-3xl font-bold">{correctCount}</div></div><div className="bg-gradient-to-br from-red-50 to-rose-100 rounded-2xl p-4"><div className="text-sm text-slate-500">Wrong</div><div className="text-3xl font-bold">{totalAnswered-correctCount}</div></div></div><button onClick={()=>startSession(mode)} className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white px-5 py-3 rounded-2xl font-bold shadow-lg">Start Next Random Set</button></div>}
 
-          {started && !complete && current && mode !== "Flashcards" && <div className="bg-white/90 backdrop-blur rounded-3xl shadow-xl border border-white/70 p-4 sm:p-6 space-y-5"><div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"><div><div className="text-sm text-slate-500">Question {activeQuestionNumber} of {sessionQuestions.length} · {current.chapter} · {current.difficulty}</div><h2 className="text-xl sm:text-2xl lg:text-3xl font-black mt-2 leading-tight">{activeQuestionNumber}. {current.q}</h2></div>{mode === "Exam" && <div className="text-2xl font-bold flex items-center gap-2"><Timer /> {formatTime(secondsLeft)}</div>}</div><ProgressBar value={progress} /><div className="grid gap-3">{current.options.map((option,oIndex)=>{ const isCorrect=oIndex===current.answer; const isSelected=selected===oIndex; let style="border-slate-200 bg-white hover:bg-gradient-to-r hover:from-sky-50 hover:to-purple-50"; if(selected!==null && isCorrect) style="border-green-500 bg-gradient-to-r from-green-50 to-emerald-100"; if(selected!==null && isSelected && !isCorrect) style="border-red-500 bg-gradient-to-r from-red-50 to-rose-100"; return <button key={oIndex} onClick={()=>recordAnswer(oIndex)} className={`text-left p-4 sm:p-5 rounded-2xl border-2 transition flex items-center justify-between gap-3 w-full text-sm sm:text-base ${style}`}><span><span className="font-bold mr-2">{LETTERS[oIndex]}.</span>{option}</span>{selected!==null && isCorrect && <CheckCircle2 className="w-6 h-6 text-green-600 shrink-0" />}{selected!==null && isSelected && !isCorrect && <XCircle className="w-6 h-6 text-red-600 shrink-0" />}</button>})}</div>{mode !== "Exam" && <div className="flex flex-wrap gap-2"><button onClick={()=>setShowHint(v=>!v)} className="px-4 py-2 rounded-xl bg-slate-100 font-semibold flex items-center gap-2">{showHint ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />} Hint</button><button onClick={()=>setShowFormula(v=>!v)} className="px-4 py-2 rounded-xl bg-slate-100 font-semibold flex items-center gap-2"><Zap className="w-4 h-4" /> Formula</button><button onClick={()=>setShowAI(v=>!v)} className="px-4 py-2 rounded-xl bg-purple-100 text-purple-900 font-semibold flex items-center gap-2"><Brain className="w-4 h-4" /> AI Explain</button></div>}{showHint && <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4"><strong>Hint:</strong> {current.hint}</div>}{showFormula && <div className="bg-blue-50 border border-blue-200 rounded-xl p-4"><strong>Formula clue:</strong> {current.formula}</div>}{showAI && (() => {
-                  const ai = buildAIExplanation(current);
-                  return (
-                    <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4 space-y-3">
-                      <div className="flex items-center gap-2 font-bold text-purple-900">
-                        <Brain className="w-5 h-5" /> AI-style Explanation
-                      </div>
-                      <p><strong>Correct answer:</strong> {LETTERS[current.answer]}. {ai.correct}</p>
-                      <p><strong>Why this is correct:</strong> {ai.why}</p>
-                      <p><strong>Keyword spotting:</strong> {ai.keyword}</p>
-                      <p><strong>Formula clue:</strong> {ai.formula}</p>
-                      <p><strong>Memory hook:</strong> {ai.memory}</p>
-                      <p><strong>EASA trap:</strong> {ai.trap}</p>
-                      <div>
-                        <strong>Why the other choices are wrong:</strong>
-                        <ul className="list-disc pl-5 mt-2 space-y-1">
-                          {ai.wrong.map((item, index) => <li key={index}>{item}</li>)}
-                        </ul>
-                      </div>
-                    </div>
-                  );
-                })()}{selected !== null && <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-4 space-y-3 border border-indigo-100"><p className="font-semibold">Correct answer: {LETTERS[current.answer]}. {current.options[current.answer]}</p><p className="text-slate-700">{asSentence(current.hint)}</p><p className="text-slate-700"><strong>Formula / clue:</strong> {current.formula}</p><p className="text-slate-700"><strong>Exam trap:</strong> {chapterTrap(current.chapter)}</p><button onClick={nextQuestion} className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white px-5 py-3 rounded-2xl font-bold shadow-lg">Next</button></div>}</div>}
+          {started && !complete && current && mode !== "Flashcards" && <div className="bg-white/90 backdrop-blur rounded-3xl shadow-xl border border-white/70 p-4 sm:p-6 space-y-5"><div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"><div><div className="text-sm text-slate-500">Question {activeQuestionNumber} of {sessionQuestions.length} · {current.chapter} · {current.difficulty}</div><h2 className="text-xl sm:text-2xl lg:text-3xl font-black mt-2 leading-tight">{activeQuestionNumber}. {current.q}</h2></div>{mode === "Exam" && <div className="text-2xl font-bold flex items-center gap-2"><Timer /> {formatTime(secondsLeft)}</div>}</div><ProgressBar value={progress} /><div className="grid gap-3">{current.options.map((option,oIndex)=>{ const isCorrect=oIndex===current.answer; const isSelected=selected===oIndex; let style="border-slate-200 bg-white hover:bg-gradient-to-r hover:from-sky-50 hover:to-purple-50"; if(selected!==null && isCorrect) style="border-green-500 bg-gradient-to-r from-green-50 to-emerald-100"; if(selected!==null && isSelected && !isCorrect) style="border-red-500 bg-gradient-to-r from-red-50 to-rose-100"; return <button key={oIndex} onClick={()=>recordAnswer(oIndex)} className={`text-left p-4 sm:p-5 rounded-2xl border-2 transition flex items-center justify-between gap-3 w-full text-sm sm:text-base ${style}`}><span><span className="font-bold mr-2">{LETTERS[oIndex]}.</span>{option}</span>{selected!==null && isCorrect && <CheckCircle2 className="w-6 h-6 text-green-600 shrink-0" />}{selected!==null && isSelected && !isCorrect && <XCircle className="w-6 h-6 text-red-600 shrink-0" />}</button>})}</div>{mode !== "Exam" && <div className="flex flex-wrap gap-2"><button onClick={()=>setShowHint(v=>!v)} className="px-4 py-2 rounded-xl bg-slate-100 font-semibold flex items-center gap-2">{showHint ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />} Hint</button><button onClick={()=>setShowFormula(v=>!v)} className="px-4 py-2 rounded-xl bg-slate-100 font-semibold flex items-center gap-2"><Zap className="w-4 h-4" /> Formula</button><button onClick={()=>setShowAI(v=>!v)} className="px-4 py-2 rounded-xl bg-purple-100 text-purple-900 font-semibold flex items-center gap-2"><Brain className="w-4 h-4" /> AI Explain</button></div>}{showHint && <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4"><strong>Hint:</strong> {current.hint}</div>}{showFormula && <div className="bg-blue-50 border border-blue-200 rounded-xl p-4"><strong>Formula clue:</strong> {current.formula}</div>}{showAI && <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4 space-y-3"><div className="flex items-center gap-2 font-bold text-purple-900"><Brain className="w-5 h-5" /> AI-style Explanation</div><p><strong>Correct answer:</strong> {LETTERS[current.answer]}. {current.options[current.answer]}</p><p><strong>Why:</strong> {current.explanation || current.hint}</p><p><strong>Keyword spotting:</strong> When the question points to <strong>{current.concept}</strong>, choose the answer connected to that keyword.</p><p><strong>Formula clue:</strong> {current.formula}</p><p><strong>EASA trap:</strong> Do not just memorise the word. Look for the action in the question: force, motion, heat transfer, pressure, light bending, wave motion, or state change.</p></div>}{selected !== null && <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-4 space-y-3 border border-indigo-100"><p className="font-semibold">Correct answer: {LETTERS[current.answer]}. {current.options[current.answer]}</p><p className="text-slate-700">{current.hint}</p><button onClick={nextQuestion} className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white px-5 py-3 rounded-2xl font-bold shadow-lg">Next</button></div>}</div>}
 
           {started && !complete && current && mode === "Flashcards" && <div className="bg-white/90 backdrop-blur rounded-3xl shadow-xl border border-white/70 p-5 sm:p-8 space-y-5 text-center"><div className="text-sm text-slate-500">Card {activeQuestionNumber} of {sessionQuestions.length} · {current.chapter}</div><ProgressBar value={progress} /><div className="rounded-3xl border-2 p-8 min-h-[260px] flex flex-col justify-center bg-gradient-to-br from-slate-50 to-indigo-50"><h2 className="text-2xl sm:text-3xl font-bold mb-6">{current.concept}</h2>{showFlashAnswer ? <div className="space-y-3"><p className="text-2xl font-bold text-green-700">{current.hint}</p><p className="font-mono bg-white rounded-xl p-3">{current.formula}</p></div> : <p className="text-slate-500">Think first, then reveal.</p>}</div><div className="flex flex-wrap justify-center gap-3"><button onClick={()=>setShowFlashAnswer(v=>!v)} className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-5 py-3 rounded-2xl font-bold shadow-lg">Reveal / Hide</button><button onClick={()=>{setShowFlashAnswer(false); nextQuestion();}} className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white px-5 py-3 rounded-2xl font-bold shadow-lg">Next Card</button></div></div>}
         </div>
